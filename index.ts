@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 app.use(cors());
 
-const server = createServer(app); // Create an HTTP server
+const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
@@ -19,28 +19,36 @@ const io = new Server(server, {
   },
 });
 
-// Basic Socket.IO event handling
 io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
-
-  socket.on("send_message", (data) => {
-    console.log("send_message event triggered!", data);
-    // broadcast.emit sends emits to everyone beside you.
-    socket.broadcast.emit("receive_message", data);
+  console.log("connection:", socket.id);
+  socket.on("disconnect", () => {
+    console.log("disconnect:", "system left", socket.id);
   });
 
-  //   socket.on("message", (msg) => {
-  //     console.log("Message received:", msg);
-  //     socket.emit("message", `Echo: ${msg}`); // Echo the message back to the client
-  //   });
+  socket.on("join_room", (data) => {
+    console.log("user", socket.id, "joined room:", data.roomNumber);
 
-  socket.on("disconnect", () => {
-    console.log("A user disconnected:", socket.id);
+    if (socket.rooms.has(data.roomNumber)) {
+      console.log(`User ${socket.id} is already in room ${data.roomNumber}`);
+    } else {
+      socket.join(data.roomNumber);
+    }
+  });
+
+  socket.on("disconnecting", () => {
+    console.log("disconnecting", "room left", socket.id); // the Set
+
+    socket.on("send_message", (data) => {
+      console.log("send_message event triggered!", data);
+      socket.to(data.roomNumber).emit("receive_message", data);
+    });
   });
 });
 
 // Define an Express route
 app.get("/", (req: Request, res: Response) => {
+  console.log("Get header request");
+
   res.json({ message: "content from server" });
 });
 
