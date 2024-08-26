@@ -4,7 +4,6 @@ import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -26,22 +25,33 @@ io.on("connection", (socket) => {
   });
 
   socket.on("join_room", (data) => {
-    console.log("user", socket.id, "joined room:", data.roomNumber);
-
     if (socket.rooms.has(data.roomNumber)) {
       console.log(`User ${socket.id} is already in room ${data.roomNumber}`);
     } else {
       socket.join(data.roomNumber);
+      console.log("user", socket.id, "joined room:", data.roomNumber);
+    }
+  });
+
+  socket.on("leave_room", (data) => {
+    console.log("user", socket.id, "left room:", data.roomNumber);
+    if (socket.rooms.has(data.roomNumber)) {
+      socket.leave(data.roomNumber);
+      console.log("user", socket.id, "left room:", data.roomNumber);
+    } else {
+      console.log(`User ${socket.id} is not logged to room ${data.roomNumber}`);
+    }
+  });
+
+  socket.on("send_message", (data) => {
+    console.log("send_message event triggered!", data);
+    if (socket.rooms.has(data.joinRoomNumber)) {
+      socket.to(data.joinRoomNumber).emit("receive_message", data);
     }
   });
 
   socket.on("disconnecting", () => {
     console.log("disconnecting", "room left", socket.id); // the Set
-
-    socket.on("send_message", (data) => {
-      console.log("send_message event triggered!", data);
-      socket.to(data.roomNumber).emit("receive_message", data);
-    });
   });
 });
 
